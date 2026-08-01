@@ -210,23 +210,46 @@ export async function resolveProductQuery(query) {
   if (!query) return { error: "Describe what you're looking for" };
 
   try {
-    const candidates = await searchProducts(query);
+    // Step 1: turn a vague request ("the latest iPhone") into a concrete,
+    // searchable product name before hitting search.
+    const normalizeCompletion = await grok.chat.completions.create({
+      model: GROK_MODEL,
+      messages: [
+        {
+          role: "system",
+          content:
+            'You convert a shopper\'s request into a short, concrete search query for a live shopping search engine. If the request names a specific product, keep brand + model + key spec (e.g. storage). If the request says "latest"/"newest"/"current" model of a product line, do NOT guess a specific model number or year — your training data may be outdated and out of date guesses return the wrong product. Instead keep the word "latest" in the query (e.g. "latest iPhone price India") and let live search results determine the actual current model. Reply with ONLY the search query text, nothing else — no quotes, no explanation.',
+        },
+        { role: "user", content: query },
+      ],
+    });
+
+    const normalizedQuery =
+      normalizeCompletion.choices[0]?.message?.content?.trim() || query;
+
+    const candidates = await searchProducts(normalizedQuery);
 
     if (candidates.length === 0) {
       return { error: "Couldn't find any matching products" };
     }
 
+    // Step 2: pick the best real product listing, strongly preferring
+    // Indian shopping sites.
     const completion = await grok.chat.completions.create({
       model: GROK_MODEL,
       messages: [
         {
           role: "system",
           content:
-            'You pick the single best-matching product page for a shopping request. Reply with ONLY JSON: {"url": "..."}. Pick from the given candidates only.',
+            'You pick the single best-matching, currently-available product listing page for a shopping request, based ONLY on the candidate titles/descriptions given (they reflect live search results, which are more current than your training data). If the request asks for the "latest"/"newest" model, identify the most recently released model actually present among the candidates — do not default to an older model you happen to recognize. Strongly prefer Indian e-commerce sites (amazon.in, flipkart.com, croma.com, reliancedigital.in, tatacliq.com, vijaysales.com) over any other site. Reject search/category/homepage links — only pick an actual product page. Reply with ONLY JSON: {"url": "..."}. Pick from the given candidates only.',
         },
         {
           role: "user",
-          content: JSON.stringify({ request: query, candidates }),
+          content: JSON.stringify({
+            originalRequest: query,
+            searchedFor: normalizedQuery,
+            candidates,
+          }),
         },
       ],
     });
