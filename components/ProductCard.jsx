@@ -1,12 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  deleteProduct,
-  getPriceInsight,
-  suggestTargetPrice,
-  setTargetPrice,
-} from "@/app/actions";
+import { deleteProduct, getPriceInsight } from "@/app/actions";
 import PriceChart from "./PriceChart";
 import {
   Card,
@@ -15,7 +10,6 @@ import {
   CardHeader,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   ExternalLink,
@@ -25,10 +19,8 @@ import {
   ChevronUp,
   Sparkles,
   Loader2,
-  Target,
 } from "lucide-react";
 import Link from "next/link";
-import { toast } from "sonner";
 
 export default function ProductCard({ product }) {
   const [showChart, setShowChart] = useState(false);
@@ -36,10 +28,6 @@ export default function ProductCard({ product }) {
 
   const [insight, setInsight] = useState(null);
   const [insightLoading, setInsightLoading] = useState(false);
-
-  const [target, setTarget] = useState(product.target_price ?? "");
-  const [targetLoading, setTargetLoading] = useState(false);
-  const [suggesting, setSuggesting] = useState(false);
 
   const handleDelete = async () => {
     if (!confirm("Remove this product from tracking?")) return;
@@ -53,30 +41,6 @@ export default function ProductCard({ product }) {
     const result = await getPriceInsight(product.id);
     setInsight(result.insight || result.error);
     setInsightLoading(false);
-  };
-
-  const handleSuggestTarget = async () => {
-    setSuggesting(true);
-    const result = await suggestTargetPrice(product.id);
-    if (result.error) {
-      toast.error(result.error);
-    } else {
-      setTarget(result.targetPrice);
-      toast.success(result.reason || "AI suggested a target price");
-    }
-    setSuggesting(false);
-  };
-
-  const handleSaveTarget = async () => {
-    if (!target) return;
-    setTargetLoading(true);
-    const result = await setTargetPrice(product.id, parseFloat(target));
-    if (result.error) {
-      toast.error(result.error);
-    } else {
-      toast.success("Target price saved — we'll alert you when it's hit");
-    }
-    setTargetLoading(false);
   };
 
   return (
@@ -172,40 +136,6 @@ export default function ProductCard({ product }) {
             Get AI insight
           </Button>
         )}
-
-        {/* Target price */}
-        <div className="flex items-center gap-2 pt-1 border-t">
-          <Target className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-          <Input
-            type="number"
-            step="0.01"
-            value={target}
-            onChange={(e) => setTarget(e.target.value)}
-            placeholder="Alert me at..."
-            className="h-8 text-xs"
-          />
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 px-2 shrink-0"
-            onClick={handleSuggestTarget}
-            disabled={suggesting}
-          >
-            {suggesting ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Sparkles className="h-3.5 w-3.5" />
-            )}
-          </Button>
-          <Button
-            size="sm"
-            className="h-8 px-3 shrink-0"
-            onClick={handleSaveTarget}
-            disabled={targetLoading || !target}
-          >
-            Save
-          </Button>
-        </div>
       </CardContent>
 
       {showChart && (

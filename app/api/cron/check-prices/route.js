@@ -38,7 +38,7 @@ export async function POST(request) {
       try {
         const productData = await scrapeProduct(product.url);
 
-        if (!productData.currentPrice) {
+        if (!productData || !productData.currentPrice) {
           results.failed++;
           continue;
         }
@@ -46,7 +46,7 @@ export async function POST(request) {
         const newPrice = parseFloat(productData.currentPrice);
         const oldPrice = parseFloat(product.current_price);
 
-        await supabase
+        const { error: updateError } = await supabase
           .from("products")
           .update({
             current_price: newPrice,
@@ -56,6 +56,8 @@ export async function POST(request) {
             updated_at: new Date().toISOString(),
           })
           .eq("id", product.id);
+
+        if (updateError) throw updateError;
 
         if (oldPrice !== newPrice) {
           await supabase.from("price_history").insert({
