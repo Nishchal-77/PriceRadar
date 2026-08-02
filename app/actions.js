@@ -128,6 +128,56 @@ export async function getProducts() {
   }
 }
 
+// Total saved across tracked products: for each product, the drop between
+// the highest price ever recorded and the current price.
+export async function getSavingsSummary() {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return { totalSaved: 0, currency: "₹", productsWithDrop: 0 };
+
+    const { data: products } = await supabase
+      .from("products")
+      .select("id, current_price, currency")
+      .eq("user_id", user.id);
+
+    if (!products || products.length === 0) {
+      return { totalSaved: 0, currency: "₹", productsWithDrop: 0 };
+    }
+
+    const ids = products.map((p) => p.id);
+    const { data: history } = await supabase
+      .from("price_history")
+      .select("product_id, price")
+      .in("product_id", ids);
+
+    let totalSaved = 0;
+    let productsWithDrop = 0;
+
+    for (const product of products) {
+      const prices = (history || [])
+        .filter((h) => h.product_id === product.id)
+        .map((h) => parseFloat(h.price));
+      if (prices.length === 0) continue;
+
+      const highest = Math.max(...prices, parseFloat(product.current_price));
+      const saved = highest - parseFloat(product.current_price);
+      if (saved > 0) {
+        totalSaved += saved;
+        productsWithDrop++;
+      }
+    }
+
+    return { totalSaved, currency: "₹", productsWithDrop };
+  } catch (error) {
+    console.error("Get savings summary error:", error);
+    return { totalSaved: 0, currency: "₹", productsWithDrop: 0 };
+  }
+}
+
 // GET price history for a product
 export async function getPriceHistory(productId) {
   try {

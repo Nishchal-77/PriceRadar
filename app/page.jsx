@@ -1,22 +1,215 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Radar, Rabbit, Shield, Bell, Sparkles } from "lucide-react";
+import {
+  Radar,
+  Rabbit,
+  Bell,
+  Sparkles,
+  ArrowDown,
+} from "lucide-react";
 import AuthButton from "@/components/AuthButton";
 import ProductCard from "@/components/ProductCard";
 import ThemeToggle from "@/components/ThemeToggle";
 import AddProductForm from "@/components/AddProductForm";
 import ChatAssistant from "@/components/ChatAssistant";
 import { createClient } from "@/utils/supabase/client";
-import { getProducts } from "@/app/actions";
+import { getProducts, getSavingsSummary } from "@/app/actions";
+
+const FEATURES = [
+  {
+    icon: Rabbit,
+    label: "Track any link",
+    title: "Paste, and it's watched",
+    description:
+      "Drop in a product URL from any major retailer and PriceRadar starts checking it daily.",
+  },
+  {
+    icon: Sparkles,
+    label: "Or describe it",
+    title: '"Cheapest 65″ OLED"',
+    description:
+      "No link handy? Describe what you want and PriceRadar finds and tracks the real listing.",
+  },
+  {
+    icon: Bell,
+    label: "Ask about it",
+    title: "Chat with your watchlist",
+    description:
+      "“What dropped this week?” — a straight answer from an assistant scoped to your tracked items.",
+  },
+];
+
+function Nav({ user }) {
+  return (
+    <header className="border-b border-border sticky top-0 z-20 bg-background/95 backdrop-blur-sm">
+      <div className="max-w-6xl mx-auto flex justify-between items-center px-6 py-5">
+        <div className="flex items-center gap-2 font-mono font-bold text-lg tracking-tight">
+          <Radar className="h-5 w-5 text-stamp" strokeWidth={2.5} />
+          PriceRadar
+        </div>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <AuthButton user={user} />
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function LandingPage() {
+  return (
+    <>
+      <section className="max-w-6xl mx-auto px-6 pt-16 pb-20 grid lg:grid-cols-[1fr_420px] gap-14 items-start">
+        <div>
+          <div className="font-mono text-xs uppercase tracking-widest text-stamp mb-4">
+            Keep the receipt before you buy
+          </div>
+          <h1 className="font-mono font-bold text-4xl sm:text-5xl leading-[1.15] mb-6 text-balance">
+            Know the real price before you pay it.
+          </h1>
+          <p className="text-muted-foreground text-lg max-w-md mb-8 text-balance">
+            Track anything you&apos;re about to buy. PriceRadar checks daily, and
+            the moment the price drops, you get the receipt for what you
+            saved.
+          </p>
+          <AddProductForm user={null} onAdded={() => {}} />
+        </div>
+
+        <div className="relative">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="perforated-bottom rounded-sm border border-border overflow-hidden shadow-sm col-span-2 aspect-[16/10]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="https://images.unsplash.com/photo-1461151304267-38535e780c79?w=800&q=80"
+                alt="A smart TV in a living room"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="rounded-sm border border-border overflow-hidden shadow-sm aspect-square">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=600&q=80"
+                alt="A smartphone on a desk"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="rounded-sm border border-border overflow-hidden shadow-sm aspect-square">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="https://images.unsplash.com/photo-1558317374-067fb5f30001?w=600&q=80"
+                alt="A robot vacuum cleaning a living room"
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </div>
+
+          <div className="mt-6 border-l-2 border-stamp pl-4">
+            <p className="font-mono text-lg leading-snug text-balance">
+              &ldquo;Patience is the best discount code.&rdquo;
+            </p>
+            <p className="text-xs text-muted-foreground mt-2 uppercase tracking-wide font-mono">
+              No coupon needed — just a watchful eye.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-y border-border">
+        <div className="max-w-6xl mx-auto grid sm:grid-cols-3">
+          {FEATURES.map((feature, index) => {
+            const Icon = feature.icon;
+            return (
+              <div
+                key={index}
+                className={`px-6 py-8 ${
+                  index > 0 ? "sm:border-l border-border" : ""
+                } ${index > 0 ? "border-t sm:border-t-0" : ""}`}
+              >
+                <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-stamp mb-3">
+                  <Icon className="h-3.5 w-3.5" />
+                  {feature.label}
+                </div>
+                <h3 className="font-semibold mb-1.5">{feature.title}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {feature.description}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <footer className="max-w-6xl mx-auto px-6 py-8 text-sm text-muted-foreground font-mono">
+        © PriceRadar — a smarter way to watch prices.
+      </footer>
+    </>
+  );
+}
+
+function Dashboard({ user, products, savings, refreshProducts }) {
+  return (
+    <>
+      <section className="max-w-6xl mx-auto px-6 pt-10 pb-4">
+        <AddProductForm user={user} onAdded={refreshProducts} />
+      </section>
+
+      <section className="max-w-6xl mx-auto px-6">
+        <div className="border border-dashed border-border rounded-sm px-5 py-4 flex items-center justify-between font-mono">
+          <div className="text-xs uppercase tracking-widest text-muted-foreground">
+            {savings.productsWithDrop > 0
+              ? `Total saved across ${savings.productsWithDrop} product${
+                  savings.productsWithDrop === 1 ? "" : "s"
+                }`
+              : "Total saved"}
+          </div>
+          <div className="text-xl font-bold text-savings flex items-center gap-1">
+            {savings.totalSaved > 0 && <ArrowDown className="h-4 w-4" />}
+            {savings.currency}
+            {savings.totalSaved.toLocaleString("en-IN", {
+              maximumFractionDigits: 0,
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section className="max-w-6xl mx-auto px-6 py-10">
+        <h2 className="font-mono font-bold text-xl mb-6">
+          Your Tracked Products
+        </h2>
+
+        {products.length === 0 ? (
+          <div className="rounded-sm border border-dashed border-border py-16 text-center">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-secondary">
+              <Radar className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <p className="text-muted-foreground">
+              You haven&apos;t added any products yet.
+            </p>
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {products.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        )}
+      </section>
+    </>
+  );
+}
 
 export default function Home() {
   const supabase = createClient();
 
   const [user, setUser] = useState(null);
   const [products, setProducts] = useState([]);
+  const [savings, setSavings] = useState({
+    totalSaved: 0,
+    currency: "₹",
+    productsWithDrop: 0,
+  });
 
-  // ✅ Load user session
   useEffect(() => {
     const getUser = async () => {
       const {
@@ -37,126 +230,33 @@ export default function Home() {
   }, [supabase]);
 
   const refreshProducts = async () => {
-    const data = await getProducts();
-    setProducts(data);
+    const [productData, savingsData] = await Promise.all([
+      getProducts(),
+      getSavingsSummary(),
+    ]);
+    setProducts(productData);
+    setSavings(savingsData);
   };
 
-  // ✅ Fetch products when user logs in
   useEffect(() => {
     if (!user) return;
     refreshProducts();
   }, [user]);
 
-  const FEATURES = [
-    {
-      icon: Rabbit,
-      title: "Lightning Fast",
-      description:
-        "PriceRadar extracts prices in seconds, handling JavaScript and dynamic content",
-    },
-    {
-      icon: Shield,
-      title: "Always Reliable",
-      description:
-        "Works across all major e-commerce sites with built-in anti-bot protection",
-    },
-    {
-      icon: Bell,
-      title: "Smart Alerts",
-      description: "Get notified instantly when prices drop below your target",
-    },
-  ];
-
   return (
     <main className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="bg-background/80 backdrop-blur-md border-b sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto flex justify-between items-center px-6 py-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground">
-              <Radar className="h-4.5 w-4.5" />
-            </div>
-            <h1 className="text-xl font-bold tracking-tight">PriceRadar</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <AuthButton user={user} />
-          </div>
-        </div>
-      </header>
+      <Nav user={user} />
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <div className="absolute -top-24 left-1/4 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
-          <div className="absolute top-10 right-1/4 h-72 w-72 rounded-full bg-accent/20 blur-3xl" />
-        </div>
-
-        <div className="max-w-6xl mx-auto px-6 py-20 text-center">
-          <div className="inline-flex items-center gap-1.5 rounded-full border bg-secondary/60 px-3 py-1 text-xs font-medium text-secondary-foreground mb-6">
-            <Sparkles className="h-3.5 w-3.5 text-primary" />
-            AI-powered price insights, built in
-          </div>
-
-          <h2 className="text-4xl sm:text-5xl font-bold tracking-tight mb-4 text-balance">
-            Track Product Prices,{" "}
-            <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Automatically
-            </span>
-          </h2>
-
-          <p className="text-muted-foreground text-lg mb-8 max-w-xl mx-auto text-balance">
-            Get notified when prices drop on Amazon, Flipkart, and more.
-          </p>
-
-          <AddProductForm user={user} onAdded={refreshProducts} />
-        </div>
-      </section>
-
-      {/* Features */}
-      <section className="max-w-6xl mx-auto px-6 pb-20">
-        <div className="grid md:grid-cols-3 gap-6">
-          {FEATURES.map((feature, index) => {
-            const Icon = feature.icon;
-            return (
-              <div
-                key={index}
-                className="group rounded-2xl border bg-card p-6 text-center shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
-              >
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-accent/15 group-hover:from-primary/25 group-hover:to-accent/25 transition-colors">
-                  <Icon className="w-6 h-6 text-primary" />
-                </div>
-                <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
-                <p className="text-muted-foreground text-sm">
-                  {feature.description}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* ✅ User's Products Section */}
-      <section className="max-w-6xl mx-auto px-6 py-10">
-        <h2 className="text-2xl font-bold mb-6">Your Tracked Products</h2>
-
-        {products.length === 0 ? (
-          <div className="rounded-2xl border border-dashed bg-card/50 py-16 text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-secondary">
-              <Radar className="h-6 w-6 text-muted-foreground" />
-            </div>
-            <p className="text-muted-foreground">
-              You haven't added any products yet.
-            </p>
-          </div>
-        ) : (
-          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        )}
-      </section>
+      {user ? (
+        <Dashboard
+          user={user}
+          products={products}
+          savings={savings}
+          refreshProducts={refreshProducts}
+        />
+      ) : (
+        <LandingPage />
+      )}
 
       {user && <ChatAssistant />}
     </main>
