@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { createPortal } from "react-dom";
 import { deleteProduct, getPriceInsight } from "@/app/actions";
 import PriceChart from "./PriceChart";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -24,51 +23,12 @@ function sourceLabel(url) {
   }
 }
 
-const PREVIEW_SIZE = 288;
-const PREVIEW_MARGIN = 12;
-
-// The card has overflow-hidden (for the perforated-edge effect), so an
-// enlarged preview positioned inside it would get clipped. Render it into
-// a portal instead, positioned in viewport coordinates from the
-// thumbnail's own bounding box.
-function ImageHoverPreview({ src, alt, anchorRect }) {
-  if (!anchorRect || typeof document === "undefined") return null;
-
-  const spaceRight = window.innerWidth - anchorRect.right;
-  const placeLeft = spaceRight < PREVIEW_SIZE + PREVIEW_MARGIN * 2;
-
-  const left = placeLeft
-    ? Math.max(PREVIEW_MARGIN, anchorRect.left - PREVIEW_SIZE - PREVIEW_MARGIN)
-    : Math.min(
-        window.innerWidth - PREVIEW_SIZE - PREVIEW_MARGIN,
-        anchorRect.right + PREVIEW_MARGIN
-      );
-
-  const top = Math.min(
-    Math.max(PREVIEW_MARGIN, anchorRect.top - PREVIEW_SIZE / 2 + anchorRect.height / 2),
-    window.innerHeight - PREVIEW_SIZE - PREVIEW_MARGIN
-  );
-
-  return createPortal(
-    <div
-      className="fixed z-50 rounded-sm border border-border bg-card shadow-2xl overflow-hidden pointer-events-none"
-      style={{ top, left, width: PREVIEW_SIZE, height: PREVIEW_SIZE }}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt={alt} className="w-full h-full object-cover" />
-    </div>,
-    document.body
-  );
-}
-
 export default function ProductCard({ product }) {
   const [showChart, setShowChart] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const [insight, setInsight] = useState(null);
   const [insightLoading, setInsightLoading] = useState(false);
-
-  const [hoverRect, setHoverRect] = useState(null);
 
   const handleDelete = async () => {
     if (!confirm("Remove this product from tracking?")) return;
@@ -88,30 +48,13 @@ export default function ProductCard({ product }) {
     <Card className="perforated-top rounded-sm shadow-none gap-0 py-0 overflow-hidden">
       <div className="flex gap-3 px-4 pt-6 pb-3">
         {product.image_url && (
-          <>
-            <div
-              className="shrink-0 cursor-zoom-in"
-              onMouseEnter={(e) =>
-                setHoverRect(e.currentTarget.getBoundingClientRect())
-              }
-              onMouseLeave={() => setHoverRect(null)}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={product.image_url}
-                alt={product.name}
-                loading="lazy"
-                className="w-16 h-16 object-cover rounded-sm border border-border bg-secondary"
-              />
-            </div>
-            {hoverRect && (
-              <ImageHoverPreview
-                src={product.image_url}
-                alt={product.name}
-                anchorRect={hoverRect}
-              />
-            )}
-          </>
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={product.image_url}
+            alt={product.name}
+            loading="lazy"
+            className="w-16 h-16 object-cover rounded-sm border border-border bg-secondary shrink-0"
+          />
         )}
 
         <div className="flex-1 min-w-0">
