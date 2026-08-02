@@ -68,10 +68,7 @@ export async function POST(request) {
 
           results.priceChanges++;
 
-          const targetHit =
-            product.target_price != null && newPrice <= product.target_price;
-
-          if (newPrice < oldPrice || targetHit) {
+          if (newPrice < oldPrice) {
             const {
               data: { user },
             } = await supabase.auth.admin.getUserById(product.user_id);

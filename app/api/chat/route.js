@@ -13,10 +13,14 @@ export async function POST(request) {
 
   const { messages } = await request.json();
 
-  const { data: products } = await supabase
+  const { data: products, error: productsError } = await supabase
     .from("products")
-    .select("id, name, current_price, currency, target_price, url")
+    .select("id, name, current_price, currency, url")
     .eq("user_id", user.id);
+
+  if (productsError) {
+    console.error("Chat products fetch error:", productsError);
+  }
 
   const productIds = (products || []).map((p) => p.id);
   const { data: history } = productIds.length
