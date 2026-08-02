@@ -205,60 +205,199 @@ export async function getPriceInsight(productId) {
   }
 }
 
+// Parse a budget ("under 20k", "45-50k", "between ₹45,000 and ₹50,000")
+// out of a free-text shopping request. Returns { min?, max? } or null.
+function parseBudget(text) {
+  const t = text.toLowerCase().replace(/,/g, "");
+  const toNumber = (numStr, suffix) => {
+    let n = parseFloat(numStr);
+    if (suffix === "k") n *= 1_000;
+    else if (suffix === "l" || suffix === "lakh" || suffix === "lac") n *= 100_000;
+    return n;
+  };
+  const unit = "(k|l|lakh|lac)?";
+
+  let m = t.match(
+    new RegExp(`₹?(\\d+(?:\\.\\d+)?)\\s*${unit}\\s*(?:-|to|and)\\s*₹?(\\d+(?:\\.\\d+)?)\\s*${unit}`)
+  );
+  if (m) {
+    const min = toNumber(m[1], m[2] || m[4]);
+    const max = toNumber(m[3], m[4] || m[2]);
+    if (!isNaN(min) && !isNaN(max)) {
+      return { min: Math.min(min, max), max: Math.max(min, max) };
+    }
+  }
+
+  m = t.match(new RegExp(`(?:under|below|less than|within|max|up to)\\s*₹?(\\d+(?:\\.\\d+)?)\\s*${unit}`));
+  if (m) {
+    const max = toNumber(m[1], m[2]);
+    if (!isNaN(max)) return { max };
+  }
+
+  m = t.match(new RegExp(`(?:above|over|more than|min)\\s*₹?(\\d+(?:\\.\\d+)?)\\s*${unit}`));
+  if (m) {
+    const min = toNumber(m[1], m[2]);
+    if (!isNaN(min)) return { min };
+  }
+
+  return null;
+}
+
+// Reject category/search/listing pages so we only ever try to track a real
+// single product — Firecrawl's JSON extraction on a listing page returns
+// whatever product happens to be featured there, not the one the user asked
+// for, which is how a "under 20k phone" request can end up tracking a
+// random ₹22k item from a category browse page.
+function isLikelyProductPage(url) {
+  const u = url.toLowerCase();
+
+  if (/amazon\.[a-z.]+\/.*\/dp\/[a-z0-9]+/.test(u)) return true;
+  if (/flipkart\.com\/.+\/p\/itm/.test(u)) return true;
+  if (/croma\.com\/.+\/p\/\d+/.test(u)) return true;
+  if (/reliancedigital\.in\/.+\/p\/\d+/.test(u)) return true;
+  if (/tatacliq\.com\/.+\/p-mp\d+/.test(u)) return true;
+  if (/vijaysales\.com\/.+-\d+\.html/.test(u)) return true;
+
+  // Known listing/category/search patterns across those same sites.
+  if (/amazon\.[a-z.]+\/[^/]+\/(s|b)(\?|\/)/.test(u)) return false;
+  if (/amazon\.[a-z.]+\/s\?/.test(u)) return false;
+  if (/flipkart\.com\/q\//.test(u)) return false;
+  if (/flipkart\.com\/search/.test(u)) return false;
+  if (/croma\.com\/clp\//.test(u)) return false;
+  if (/\/(category|categories|collections|browse)(\/|\?)/.test(u)) return false;
+  if (/\bunder[-_]?\d/.test(u) || /\bbest[-_]/.test(u)) return false;
+
+  // Unknown domain/pattern — allow it through, we can't be sure.
+  return true;
+}
+
+// Rank the candidate listing pages for one search and return them best-first.
+// Budget is deliberately NOT enforced here — search snippets rarely have a
+// reliable price, and telling the model to filter by budget on unreliable
+// text made it return an empty list instead of guessing. The real price
+// gets checked after scraping each candidate, by the caller.
+async function rankCandidates(originalQuery, searchedFor, candidates) {
+  const completion = await grok.chat.completions.create({
+    model: GROK_MODEL,
+    messages: [
+      {
+        role: "system",
+        content:
+          'You rank real, currently-available product listing pages for a shopping request, based ONLY on the candidate titles/descriptions given (they reflect live search results, which are more current than your training data). If the request asks for the "latest"/"newest" model, identify the most recently released model actually present among the candidates — do not default to an older model you happen to recognize. Strongly prefer Indian e-commerce sites (amazon.in, flipkart.com, croma.com, reliancedigital.in, tatacliq.com, vijaysales.com) over any other site. Reject search/category/homepage links — only rank actual product pages. Reply with ONLY JSON: {"urls": ["best match first", "..."]}, up to 5 urls, picked from the given candidates only. Always include every plausible product-page candidate you\'re given, even if you\'re unsure of its exact price — do not return an empty list just because price isn\'t visible in the snippet.',
+      },
+      {
+        role: "user",
+        content: JSON.stringify({
+          originalRequest: originalQuery,
+          searchedFor,
+          candidates,
+        }),
+      },
+    ],
+  });
+
+  try {
+    const { urls } = parseJsonResponse(completion.choices[0]?.message?.content || "{}");
+    return urls || [];
+  } catch (parseError) {
+    console.error("Rank candidates JSON parse error:", parseError);
+    return [];
+  }
+}
+
+// Search for one product name, filter out category/listing pages, and rank
+// the remaining candidates.
+async function findRankedUrls(originalQuery, searchName) {
+  const rawCandidates = await searchProducts(searchName);
+  const productCandidates = rawCandidates.filter((c) => isLikelyProductPage(c.url));
+  const candidates = productCandidates.length ? productCandidates : rawCandidates;
+
+  if (candidates.length === 0) return [];
+  return rankCandidates(originalQuery, searchName, candidates);
+}
+
 // ✨ AI: resolve a natural-language product request into a trackable URL
 export async function resolveProductQuery(query) {
   if (!query) return { error: "Describe what you're looking for" };
 
   try {
-    // Step 1: turn a vague request ("the latest iPhone") into a concrete,
-    // searchable product name before hitting search.
-    const normalizeCompletion = await grok.chat.completions.create({
+    const budget = parseBudget(query);
+
+    // Step 1: figure out what to actually search for. A request either
+    // names a specific product ("ASUS Vivobook Go 14", "latest iPhone") —
+    // in which case we search for exactly that — or it's an open-ended ask
+    // ("a good TV in 45-50k", "best phone under 20k"). Searching an
+    // open-ended request directly mostly surfaces "best of" listicles and
+    // category pages, not real products, so instead we get the AI to name
+    // specific real models that plausibly fit, and search for those by name.
+    const planCompletion = await grok.chat.completions.create({
       model: GROK_MODEL,
       messages: [
         {
           role: "system",
           content:
-            'You convert a shopper\'s request into a short, concrete search query for a live shopping search engine. If the request names a specific product, keep brand + model + key spec (e.g. storage). If the request says "latest"/"newest"/"current" model of a product line, do NOT guess a specific model number or year — your training data may be outdated and out of date guesses return the wrong product. Instead keep the word "latest" in the query (e.g. "latest iPhone price India") and let live search results determine the actual current model. Reply with ONLY the search query text, nothing else — no quotes, no explanation.',
+            'You turn a shopper\'s request into concrete product search names for a live shopping search engine.\n' +
+            'If the request names a specific product, reply with ONLY JSON: {"names": ["<brand + model + key spec, e.g. storage>"]}. If it says "latest"/"newest"/"current" model, do NOT guess a specific model number or year — your training data may be outdated. Instead keep the word "latest" in the name and let live search results determine the actual current model.\n' +
+            'If the request is open-ended (a category + vibe/budget, e.g. "a good TV", "best phone under 20000", not one specific product), reply with ONLY JSON: {"names": ["Brand Model 1", "Brand Model 2", "Brand Model 3"]} — 3 to 5 SPECIFIC real product models (brand + model) currently sold in India that plausibly fit the category and any budget mentioned. Do not include the word "best" or a price range in these names, just concrete model names.',
         },
         { role: "user", content: query },
       ],
     });
 
-    const normalizedQuery =
-      normalizeCompletion.choices[0]?.message?.content?.trim() || query;
+    // The model occasionally emits malformed JSON here — fall back to
+    // searching the raw query rather than failing the whole request.
+    let plan = {};
+    try {
+      plan = parseJsonResponse(planCompletion.choices[0]?.message?.content || "{}");
+    } catch (parseError) {
+      console.error("Plan JSON parse error:", parseError);
+    }
+    // Kept small (2 names, 4 scrapes below): searchProducts() alone fires 4
+    // Firecrawl requests, and Firecrawl's rate limit is ~15 req/min on this
+    // plan — going wider risks a single request tripping that limit itself.
+    const searchNames =
+      Array.isArray(plan.names) && plan.names.length ? plan.names.slice(0, 2) : [query];
 
-    const candidates = await searchProducts(normalizedQuery);
+    // Search + rank every candidate name in parallel rather than one at a
+    // time — sequential search+scrape per name was taking 2+ minutes,
+    // risking a serverless timeout on a request triggered by a form submit.
+    const rankedPerName = await Promise.all(
+      searchNames.map((name) => findRankedUrls(query, `${name} price India`))
+    );
+    const orderedUrls = [...new Set(rankedPerName.flat())];
 
-    if (candidates.length === 0) {
+    if (orderedUrls.length === 0) {
       return { error: "Couldn't find any matching products" };
     }
 
-    // Step 2: pick the best real product listing, strongly preferring
-    // Indian shopping sites.
-    const completion = await grok.chat.completions.create({
-      model: GROK_MODEL,
-      messages: [
-        {
-          role: "system",
-          content:
-            'You pick the single best-matching, currently-available product listing page for a shopping request, based ONLY on the candidate titles/descriptions given (they reflect live search results, which are more current than your training data). If the request asks for the "latest"/"newest" model, identify the most recently released model actually present among the candidates — do not default to an older model you happen to recognize. Strongly prefer Indian e-commerce sites (amazon.in, flipkart.com, croma.com, reliancedigital.in, tatacliq.com, vijaysales.com) over any other site. Reject search/category/homepage links — only pick an actual product page. Reply with ONLY JSON: {"url": "..."}. Pick from the given candidates only.',
-        },
-        {
-          role: "user",
-          content: JSON.stringify({
-            originalRequest: query,
-            searchedFor: normalizedQuery,
-            candidates,
-          }),
-        },
-      ],
-    });
+    if (!budget) {
+      return { success: true, url: orderedUrls[0] };
+    }
 
-    const raw = completion.choices[0]?.message?.content || "";
-    const { url } = parseJsonResponse(raw);
+    // Verify against real scraped prices (in parallel) — search snippets
+    // can't be trusted for budget filtering — then pick the best-ranked
+    // one that actually fits.
+    const scraped = await Promise.all(
+      orderedUrls.slice(0, 4).map(async (url) => ({
+        url,
+        productData: await scrapeProduct(url).catch(() => null),
+      }))
+    );
 
-    if (!url) return { error: "Couldn't resolve that to a product link" };
-    return { success: true, url };
+    for (const { url, productData } of scraped) {
+      if (!productData?.currentPrice) continue;
+      const price = parseFloat(productData.currentPrice);
+      const withinBudget =
+        (budget.min == null || price >= budget.min) &&
+        (budget.max == null || price <= budget.max);
+      if (withinBudget) return { success: true, url };
+    }
+
+    return {
+      error: `Couldn't find a match in your budget (${
+        budget.min != null ? `₹${budget.min.toLocaleString("en-IN")}` : "₹0"
+      }–${budget.max != null ? `₹${budget.max.toLocaleString("en-IN")}` : "any"})`,
+    };
   } catch (error) {
     console.error("Resolve product query error:", error);
     return { error: "Couldn't understand that request" };

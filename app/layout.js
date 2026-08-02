@@ -2,6 +2,10 @@ import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
+// resolveProductQuery (AI product finder) runs several searches/scrapes in
+// parallel and needs more than the default serverless timeout.
+export const maxDuration = 60;
+
 export const metadata = {
   title: "PriceRadar - Never Miss a Price Drop",
   description:
