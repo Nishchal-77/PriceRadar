@@ -65,8 +65,10 @@ function LandingPage() {
           <div className="font-mono text-xs uppercase tracking-widest text-stamp mb-4">
             Keep the receipt before you buy
           </div>
-          <h1 className="font-mono font-bold text-4xl sm:text-5xl leading-[1.15] mb-6 text-balance">
-            Know the real price before you pay it.
+          <h1 className="font-serif font-bold text-5xl sm:text-6xl leading-[1.1] mb-6 text-balance">
+            Know the real price <br className="hidden sm:block" />
+            before you{" "}
+            <span className="italic font-semibold text-stamp">pay it</span>.
           </h1>
           <p className="text-muted-foreground text-lg max-w-md mb-8 text-balance">
             Track anything you&apos;re about to buy. PriceRadar checks daily, and
@@ -77,34 +79,28 @@ function LandingPage() {
         </div>
 
         <div className="relative">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="perforated-bottom rounded-sm border border-border overflow-hidden shadow-sm col-span-2 aspect-[16/10]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="https://images.unsplash.com/photo-1461151304267-38535e780c79?w=800&q=80"
-                alt="A smart TV in a living room"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div className="rounded-sm border border-border overflow-hidden shadow-sm aspect-square">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=600&q=80"
-                alt="A smartphone on a desk"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div className="rounded-sm border border-border overflow-hidden shadow-sm aspect-square">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="https://images.unsplash.com/photo-1558317374-067fb5f30001?w=600&q=80"
-                alt="A robot vacuum cleaning a living room"
-                className="w-full h-full object-cover"
-              />
-            </div>
+          <div className="relative h-[380px]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="https://images.unsplash.com/photo-1461151304267-38535e780c79?w=700&q=80"
+              alt="A smart TV in a living room"
+              className="absolute top-0 left-0 w-[78%] rounded-md shadow-2xl -rotate-2"
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="https://images.unsplash.com/photo-1558317374-067fb5f30001?w=500&q=80"
+              alt="A robot vacuum cleaning a living room"
+              className="absolute bottom-0 right-0 w-[52%] rounded-md shadow-2xl rotate-2"
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&q=80"
+              alt="A smartphone on a desk"
+              className="absolute bottom-14 left-6 w-[38%] rounded-md shadow-2xl rotate-3 ring-4 ring-background"
+            />
           </div>
 
-          <div className="mt-6 border-l-2 border-stamp pl-4">
+          <div className="mt-8 border-l-2 border-stamp pl-4">
             <p className="font-mono text-lg leading-snug text-balance">
               &ldquo;Patience is the best discount code.&rdquo;
             </p>

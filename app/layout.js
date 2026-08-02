@@ -1,4 +1,4 @@
-import { Space_Mono, Work_Sans } from "next/font/google";
+import { Space_Mono, Work_Sans, Playfair_Display } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
@@ -19,6 +19,13 @@ const spaceMono = Space_Mono({
   weight: ["400", "700"],
 });
 
+const playfair = Playfair_Display({
+  variable: "--font-serif",
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
+  style: ["normal", "italic"],
+});
+
 export const metadata = {
   title: "PriceRadar - Never Miss a Price Drop",
   description:
@@ -29,7 +36,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${workSans.variable} ${spaceMono.variable} bg-background text-foreground font-sans`}
+        className={`${workSans.variable} ${spaceMono.variable} ${playfair.variable} bg-background text-foreground font-sans`}
       >
         <ThemeProvider
           attribute="class"
