@@ -84,19 +84,19 @@ function LandingPage() {
             <img
               src="https://images.unsplash.com/photo-1461151304267-38535e780c79?w=700&q=80"
               alt="A smart TV in a living room"
-              className="absolute top-0 left-0 w-[78%] rounded-md shadow-2xl -rotate-2"
+              className="absolute top-0 left-0 z-0 w-[78%] rounded-md shadow-2xl -rotate-2 transition-transform duration-300 ease-out hover:z-10 hover:scale-110 hover:rotate-0 cursor-zoom-in"
             />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="https://images.unsplash.com/photo-1558317374-067fb5f30001?w=500&q=80"
               alt="A robot vacuum cleaning a living room"
-              className="absolute bottom-0 right-0 w-[52%] rounded-md shadow-2xl rotate-2"
+              className="absolute bottom-0 right-0 z-0 w-[52%] rounded-md shadow-2xl rotate-2 transition-transform duration-300 ease-out hover:z-10 hover:scale-110 hover:rotate-0 cursor-zoom-in"
             />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&q=80"
               alt="A smartphone on a desk"
-              className="absolute bottom-14 left-6 w-[38%] rounded-md shadow-2xl rotate-3 ring-4 ring-background"
+              className="absolute bottom-14 left-6 z-0 w-[38%] rounded-md shadow-2xl rotate-3 ring-4 ring-background transition-transform duration-300 ease-out hover:z-10 hover:scale-110 hover:rotate-0 cursor-zoom-in"
             />
           </div>
 
