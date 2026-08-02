@@ -85,7 +85,7 @@ export default function ChatAssistant() {
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
             {messages.length === 0 && (
               <p className="text-sm text-muted-foreground">
-                Ask me about your tracked products — e.g. "which of my items dropped this week?"
+                Ask me about your tracked products — e.g. &ldquo;which of my items dropped this week?&rdquo;
               </p>
             )}
             {messages.map((m, i) => (
@@ -108,10 +108,16 @@ export default function ChatAssistant() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask about your products..."
+              aria-label="Ask about your tracked products"
               className="flex-1 rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
               disabled={loading}
             />
-            <Button type="submit" size="icon" disabled={loading || !input.trim()}>
+            <Button
+              type="submit"
+              size="icon"
+              disabled={loading || !input.trim()}
+              aria-label="Send message"
+            >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (

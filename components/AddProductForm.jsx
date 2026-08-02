@@ -64,8 +64,9 @@ export default function AddProductForm({ user, onAdded }) {
           <button
             type="button"
             onClick={() => setMode("url")}
+            aria-pressed={mode === "url"}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition",
+              "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition cursor-pointer",
               mode === "url"
                 ? "bg-primary text-primary-foreground"
                 : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
@@ -77,8 +78,9 @@ export default function AddProductForm({ user, onAdded }) {
           <button
             type="button"
             onClick={() => setMode("ai")}
+            aria-pressed={mode === "ai"}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition",
+              "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition cursor-pointer",
               mode === "ai"
                 ? "bg-primary text-primary-foreground"
                 : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
@@ -96,6 +98,7 @@ export default function AddProductForm({ user, onAdded }) {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="Paste product URL (Amazon, Walmart, etc.)"
+              aria-label="Product URL"
               className="h-12 text-base"
               required
               disabled={loading}
@@ -106,6 +109,7 @@ export default function AddProductForm({ user, onAdded }) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder='Try "cheapest 65-inch OLED TV on Amazon"'
+              aria-label="Describe the product you're looking for"
               className="h-12 text-base"
               required
               disabled={loading}

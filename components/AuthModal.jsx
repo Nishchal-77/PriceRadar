@@ -29,7 +29,10 @@ export default function AuthModal({ isOpen, onClose }) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md overflow-hidden p-0 gap-0">
         <div className="relative bg-gradient-to-br from-primary via-primary to-accent px-6 pt-9 pb-14">
-          <div className="absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:16px_16px]" />
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:16px_16px]"
+          />
           <div className="relative mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/30">
             <Radar className="h-7 w-7 text-white" />
           </div>

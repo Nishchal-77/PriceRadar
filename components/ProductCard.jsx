@@ -52,6 +52,7 @@ export default function ProductCard({ product }) {
           <img
             src={product.image_url}
             alt={product.name}
+            loading="lazy"
             className="w-16 h-16 object-cover rounded-sm border border-border bg-secondary shrink-0"
           />
         )}

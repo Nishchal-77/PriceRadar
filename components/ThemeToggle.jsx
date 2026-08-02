@@ -12,7 +12,15 @@ export default function ThemeToggle() {
   useEffect(() => setMounted(true), []);
 
   if (!mounted) {
-    return <Button variant="ghost" size="icon" className="rounded-full" />;
+    return (
+      <Button
+        variant="ghost"
+        size="icon"
+        className="rounded-full"
+        aria-label="Toggle theme"
+        disabled
+      />
+    );
   }
 
   return (
