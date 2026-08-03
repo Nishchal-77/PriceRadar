@@ -7,6 +7,8 @@ import {
   Bell,
   Sparkles,
   ArrowDown,
+  Link2,
+  Mail,
 } from "lucide-react";
 import AuthButton from "@/components/AuthButton";
 import ProductCard from "@/components/ProductCard";
@@ -63,7 +65,7 @@ function LandingPage() {
       <section className="max-w-6xl mx-auto px-6 pt-16 pb-20 grid lg:grid-cols-[1fr_420px] gap-14 items-start">
         <div>
           <div className="font-mono text-xs uppercase tracking-widest text-stamp mb-4">
-            Keep the receipt before you buy
+            Paste a link. We watch the price.
           </div>
           <h1 className="font-serif font-bold text-5xl sm:text-6xl leading-[1.1] mb-6 text-balance">
             Know the real price <br className="hidden sm:block" />
@@ -71,9 +73,9 @@ function LandingPage() {
             <span className="italic font-semibold text-stamp">pay it</span>.
           </h1>
           <p className="text-muted-foreground text-lg max-w-md mb-8 text-balance">
-            Track anything you&apos;re about to buy. PriceRadar checks daily, and
-            the moment the price drops, you get the receipt for what you
-            saved.
+            Paste any product link and PriceRadar checks its price every
+            day. The moment it drops, we email you — no need to keep
+            checking yourself.
           </p>
           <AddProductForm user={null} onAdded={() => {}} />
         </div>
@@ -100,13 +102,39 @@ function LandingPage() {
             />
           </div>
 
-          <div className="mt-8 border-l-2 border-stamp pl-4">
-            <p className="font-mono text-lg leading-snug text-balance">
-              &ldquo;Patience is the best discount code.&rdquo;
-            </p>
-            <p className="text-xs text-muted-foreground mt-2 uppercase tracking-wide font-mono">
-              No coupon needed — just a watchful eye.
-            </p>
+          <div className="mt-8 space-y-4">
+            {[
+              {
+                icon: Link2,
+                title: "Paste the link",
+                description: "Any product page from Amazon, Flipkart, and more.",
+              },
+              {
+                icon: Radar,
+                title: "We check it daily",
+                description: "PriceRadar tracks the price automatically, every day.",
+              },
+              {
+                icon: Mail,
+                title: "Get an email when it drops",
+                description: "No need to check back yourself — we'll tell you.",
+              },
+            ].map((step, index) => {
+              const Icon = step.icon;
+              return (
+                <div key={index} className="flex items-start gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-stamp text-stamp">
+                    <Icon className="h-3.5 w-3.5" />
+                  </div>
+                  <div>
+                    <div className="font-medium text-sm">{step.title}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {step.description}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
